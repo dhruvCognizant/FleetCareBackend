@@ -1,14 +1,34 @@
-const { body, param } = require('express-validator');
+const { checkSchema } = require("express-validator");
 
-exports.validateOdometerReading = [
-  // param('id')
-  //   .isString().withMessage('Vehicle ID in URL must be a string')
-    
-  //   .matches(/^(?:V\d{3}|[A-HJ-NPR-Z0-9]{11,17})$/i)
-  //   .withMessage('Vehicle ID must be in the format V001 or a valid VIN'),
-
-  body('mileage')
-    .notEmpty().withMessage('mileage is required')
-    .isNumeric().withMessage('mileage must be a number')
-    .isInt({ min: 0 }).withMessage('mileage must be a positive number')
-];
+exports.odometerSchema = checkSchema({
+  mileage: {
+    in: ["body"],
+    isNumeric: {
+      errorMessage: "Mileage must be a number",
+    },
+    toInt: true,
+  },
+  serviceType: {
+    in: ["body"],
+    optional: true,
+    isString: {
+      errorMessage: "Service type must be a string",
+    },
+    trim: true,
+    isIn: {
+      options: [["Oil Change", "Brake Repair", "Battery Test"]],
+      errorMessage:
+        "Service type must be one of Oil Change, Brake Repair, Battery Test",
+    },
+  },
+  id: {
+    in: ["params"],
+    notEmpty: {
+      errorMessage: "VIN is required in URL",
+    },
+    isLength: {
+      options: { min: 5 },
+      errorMessage: "VIN must be at least 5 characters",
+    },
+  },
+});

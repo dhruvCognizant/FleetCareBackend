@@ -5,9 +5,9 @@ const {  addServiceRecord, getAllHistories } = require('../controllers/historyCo
 
 const { authenticate } = require('../middlewares/auth');
 const { authorizeRole } = require('../middlewares/auth');
+const { addServiceSchema } = require('../validator/history_validator');
 
-// Public endpoints remain public or can be protected as needed
-router.post('/addService', authenticate, authorizeRole('admin'), addServiceRecord);
+router.post('/addService', addServiceSchema, authenticate, authorizeRole('admin'), addServiceRecord);
 router.get('/allHistories', authenticate, authorizeRole('admin'), getAllHistories);
 
 module.exports = router;

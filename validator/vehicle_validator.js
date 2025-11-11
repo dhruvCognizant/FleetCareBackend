@@ -1,27 +1,67 @@
-const { body } = require('express-validator');
+const { checkSchema } = require("express-validator");
 
-exports.validateVehicle = [
-  body('type')
-    .isString().withMessage('Type must be a string')
-    .isIn(['Car', 'Truck']).withMessage('Invalid vehicle type'),
-
-  body('make')
-    .isString().withMessage('Make must be a string')
-    .isIn([
-      'Toyota', 'Honda', 'Ford', 'Chevrolet', 'BMW', 'Mercedes-Benz',
-      'Audi', 'Hyundai', 'Kia', 'Volkswagen', 'Nissan', 'Tata',
-      'Mahindra', 'Suzuki', 'Renault'
-    ]).withMessage('Unsupported brand'),
-
-  body('model')
-    .isString().withMessage('Model must be a string'),
-
-  body('year')
-    .isInt({ min: 2000 }).withMessage('Year must be a valid integer'),
-
-  body('VIN')
-    .isString().withMessage('VIN must be a string'),
-
-  body('LastServiceDate')
-    .isDate({ format: 'DD/MM/YYYY' }).withMessage('LastServiceDate must be a valid date in DD/MM/YYYY format')
-];
+exports.validateVehicle = checkSchema({
+  type: {
+    in: ["body"],
+    isString: { errorMessage: "Type must be a string" },
+    isIn: {
+      options: [["Car", "Truck"]],
+      errorMessage: "Invalid vehicle type",
+    },
+  },
+  make: {
+    in: ["body"],
+    isString: { errorMessage: "Make must be a string" },
+    isIn: {
+      options: [
+        [
+          "Toyota",
+          "Honda",
+          "Ford",
+          "Chevrolet",
+          "BMW",
+          "Mercedes-Benz",
+          "Audi",
+          "Hyundai",
+          "Kia",
+          "Volkswagen",
+          "Nissan",
+          "Tata",
+          "Mahindra",
+          "Suzuki",
+          "Renault",
+        ],
+      ],
+      errorMessage: "Unsupported brand",
+    },
+  },
+  model: {
+    in: ["body"],
+    isString: { errorMessage: "Model must be a string" },
+    notEmpty: { errorMessage: "Model is required" },
+  },
+  year: {
+    in: ["body"],
+    isInt: {
+      options: { min: 2000 },
+      errorMessage: "Year must be an integer >= 2000",
+    },
+  },
+  VIN: {
+    in: ["body"],
+    isString: { errorMessage: "VIN must be a string" },
+    notEmpty: { errorMessage: "VIN is required" },
+  },
+  LastServiceDate: {
+    in: ["body"],
+    optional: true,
+    custom: {
+      options: (value) => {
+        const date = new Date(value);
+        if (!value || !date || isNaN(date)) return true;
+        if (date > new Date()) throw new Error("Date cannot be in the future");
+        return true;
+      },
+    },
+  },
+});

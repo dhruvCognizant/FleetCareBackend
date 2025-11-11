@@ -1,18 +1,23 @@
-const { body } = require('express-validator');
+const { checkSchema } = require("express-validator");
 
-exports.validateAddServiceRecord = [
-  body('serviceId')
-    .notEmpty().withMessage('serviceId is required')
-    .isString().withMessage('serviceId must be a string')
-    .matches(/^S\d{3}$/).withMessage('serviceId must be in the format S001'),
-
-  body('price')
-    .notEmpty().withMessage('price is required')
-    .isNumeric().withMessage('price must be a number'),
-
-  body('paymentStatus')
-    .notEmpty().withMessage('paymentStatus is required'),
-
-  body('status')
-    .notEmpty().withMessage('status is required')
-];
+exports.addServiceSchema = checkSchema({
+  serviceId: {
+    in: ["body"],
+    notEmpty: { errorMessage: "serviceId is required" },
+    isMongoId: { errorMessage: "serviceId must be a valid ObjectId" },
+  },
+  paymentStatus: {
+    in: ["body"],
+    notEmpty: { errorMessage: "paymentStatus is required" },
+    isIn: {
+      options: [["Paid", "Unpaid"]],
+      errorMessage: "paymentStatus must be either Paid or Unpaid",
+    },
+  },
+  cost: {
+    in: ["body"],
+    optional: true,
+    isNumeric: { errorMessage: "cost must be a number" },
+    toFloat: true,
+  },
+});

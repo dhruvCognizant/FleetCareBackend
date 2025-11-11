@@ -11,7 +11,6 @@ const opts = {
 module.exports = passport => {
   passport.use(new JwtStrategy(opts, async (payload, done) => {
     try {
-      // ✅ Check if token has been revoked
       if (payload?.jti) {
         const revoked = await RevokedToken.findOne({ jti: payload.jti });
         if (revoked) return done(null, false, { message: 'Token revoked' });

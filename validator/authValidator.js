@@ -12,8 +12,14 @@ exports.validateLogin = checkSchema({
     }
   },
   password: {
-    in: ['body'],
-    notEmpty: { errorMessage: 'Password is required' },
-    isString: { errorMessage: 'Password must be a string' }
-  }
+  in: ['body'],
+  notEmpty: { errorMessage: 'Password is required' },
+  isString: { errorMessage: 'Password must be a string' },
+  matches: {
+    options: [/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}$/],
+    errorMessage:
+      'Password must be at least 6 characters and include uppercase, lowercase, number, and special character',
+  },
+}
+
 });

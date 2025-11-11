@@ -1,83 +1,72 @@
-const { checkSchema } = require('express-validator');
- 
-exports.validateRegistration = checkSchema({
-  username: {
-    in: ['body'],
-    isString: {
-      errorMessage: 'Username must be a string',
-    },
-    isLength: {
-      options: { min: 3, max: 50 },
-      errorMessage: 'Username must be between 3 and 50 characters',
-    },
-    matches: {
-      options: /^[a-zA-Z0-9_]+$/,
-      errorMessage: 'Username can only contain letters, numbers and underscores',
-    },
+const { checkSchema } = require("express-validator");
+
+exports.createTechnicianSchema = checkSchema({
+  firstName: {
+    in: ["body"],
+    exists: { errorMessage: "First name is required" },
+    isString: { errorMessage: "First name must be a string" },
+    trim: true,
   },
- 
+  lastName: {
+    in: ["body"],
+    exists: { errorMessage: "Last name is required" },
+    isString: { errorMessage: "Last name must be a string" },
+    trim: true,
+  },
   email: {
-    in: ['body'],
-    isEmail: {
-      errorMessage: 'Must provide a valid email address',
-    },
+    in: ["body"],
+    exists: { errorMessage: "Email is required" },
+    isEmail: { errorMessage: "Email must be valid" },
     normalizeEmail: true,
-  },
- 
-  password: {
-    in: ['body'],
-    isLength: {
-      options: { min: 8 },
-      errorMessage: 'Password must be at least 8 characters long',
-    },
-    matches: {
-      options: /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])/,
-      errorMessage: 'Password must contain at least one letter, one number and one special character',
-    },
-  },
- 
-  confirmPassword: {
-    in: ['body'],
     custom: {
-      options: (value, { req }) => {
-        if (value !== req.body.password) {
-          throw new Error('Password confirmation does not match password');
+      options: (value) => {
+        if (!value.toLowerCase().endsWith("@fleet.com")) {
+          throw new Error("Email must end with @fleet.com");
         }
         return true;
       },
     },
   },
- 
-  availabilityDays: {
-    in: ['body'],
-    isArray: {
-      errorMessage: 'Availability days must be an array',
-    },
-    custom: {
-      options: (value) => {
-        const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-        return value.every(day => validDays.includes(day));
-      },
-      errorMessage: 'Invalid day selection. Must be valid weekdays',
+
+  password: {
+    in: ["body"],
+    notEmpty: { errorMessage: "Password is required" },
+    isString: { errorMessage: "Password must be a string" },
+    matches: {
+      options: [/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}$/],
+      errorMessage:
+        "Password must be at least 6 characters and include uppercase, lowercase, number, and special character",
     },
   },
- 
   skills: {
-    in: ['body'],
-    isArray: {
-      errorMessage: 'Skills must be an array',
-    },
+    in: ["body"],
+    optional: true,
     custom: {
       options: (value) => {
-        const validSkills = [
-          'Oil Change',
-          'Brake Repair',
-          'Battery Test',
-        ];
-        return value.every(skill => validSkills.includes(skill));
+        if (Array.isArray(value)) return value.length > 0;
+        if (typeof value === "string") return value.trim().length > 0;
+        throw new Error(
+          "Skills must be a non-empty array or comma-separated string"
+        );
       },
-      errorMessage: 'Invalid skill selection. Must be from predefined skill set',
     },
+  },
+  availability: {
+    in: ["body"],
+    exists: { errorMessage: "Availability is required" },
+    custom: {
+      options: (value) => {
+        if (Array.isArray(value)) return value.length > 0;
+        if (typeof value === "string") return value.trim().length > 0;
+        throw new Error(
+          "Availability must be a non-empty array or comma-separated string"
+        );
+      },
+    },
+  },
+  isAssigned: {
+    in: ["body"],
+    optional: true,
+    isBoolean: { errorMessage: "isAssigned must be a boolean" },
   },
 });
- 

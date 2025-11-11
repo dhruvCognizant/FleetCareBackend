@@ -21,49 +21,67 @@ const brands = [
 const vehicleTypes = ["Car", "Truck"];
 
 // POST /api/vehicles
-// Create a new vehicle record
-exports.createVehicle = async (req, res) => {
+exports.createVehicle = async (req, res, next) => {
   try {
     const { type, make, model, year, VIN, LastServiceDate } = req.body;
 
-    // Validate brand
     if (!make || !brands.includes(make)) {
-      return res
-        .status(400)
-        .json({ message: "Service not available for this brand" });
+      const err = new Error("Service not available for this brand");
+      err.statusCode = 400;
+      return next(err);
     }
 
-    // Validate type
-    if (!type)
-      return res.status(400).json({ message: "Vehicle type is required" });
+    if (!type) {
+      const err = new Error("Vehicle type is required");
+      err.statusCode = 400;
+      return next(err);
+    }
+
     const normalizedType =
       type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
     if (!vehicleTypes.includes(normalizedType)) {
-      return res
-        .status(400)
-        .json({ message: "Service not available for this vehicle type" });
+      const err = new Error("Service not available for this vehicle type");
+      err.statusCode = 400;
+      return next(err);
     }
 
-    // Validate last service date (must not be invalid or in the future)
-    const parsedDate = LastServiceDate ? new Date(LastServiceDate) : null;
+    function convertDDMMYYYYtoISO(dateStr) {
+      const parts = dateStr.split("-");
+      if (parts.length === 3) {
+        const [dd, mm, yyyy] = parts;
+        return `${yyyy}-${mm}-${dd}`;
+      }
+      return dateStr;
+    }
+
+    const isoDateStr = LastServiceDate
+      ? convertDDMMYYYYtoISO(LastServiceDate)
+      : null;
+    const parsedDate = isoDateStr ? new Date(isoDateStr) : null;
+    console.log("Parsed LastServiceDate:", parsedDate);
+
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     if (parsedDate && (isNaN(parsedDate.getTime()) || parsedDate > today)) {
       return res
         .status(400)
         .json({ message: "Invalid or future last service date" });
     }
 
-    // Validate VIN
-    if (!VIN) return res.status(400).json({ message: "VIN is required" });
+    if (!VIN) {
+      const err = new Error("VIN is required");
+      err.statusCode = 400;
+      return next(err);
+    }
 
-    // Check for duplicate VIN
     const existing = await Vehicle.findOne({ VIN });
-    if (existing)
-      return res
-        .status(400)
-        .json({ message: "Vehicle with this VIN already exists" });
+    if (existing) {
+      const err = new Error("Vehicle with this VIN already exists");
+      err.statusCode = 400;
+      return next(err);
+    }
 
-    // Create new vehicle document
     const vehicleDoc = new Vehicle({
       VIN,
       type: normalizedType,
@@ -71,39 +89,30 @@ exports.createVehicle = async (req, res) => {
       model,
       year,
       lastServiceDate: parsedDate || null,
-      odometerReadings: [], // initialize empty readings
-      serviceDetails: [], // initialize empty service details
+      odometerReadings: [],
+      serviceDetails: [],
     });
 
-    // Save to DB
     const saved = await vehicleDoc.save();
     res.status(200).json(saved);
   } catch (err) {
-    console.error("createVehicle error", err);
-    res.status(500).json({ message: "Internal server error" });
+    next(err);
   }
 };
 
 // GET /api/vehicles
-// Fetch all vehicles (only supported brands/types) and enrich with service info
-exports.getVehicles = async (req, res) => {
+exports.getVehicles = async (req, res, next) => {
   try {
     const vehicles = await Vehicle.find().lean();
 
-    // Filter only supported brands and types
     const filtered = vehicles.filter(
       (v) => brands.includes(v.make) && vehicleTypes.includes(v.type)
     );
 
     if (filtered.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "No Vehicles Available for supported brands/types" });
+      return res.status(200).json([]);
     }
 
-    // Enrich each vehicle:
-    // - nextServiceMileage (if set)
-    // - hasOpenUnpaidService (true if unpaid/open service exists)
     const enriched = await Promise.all(
       filtered.map(async (v) => {
         const unpaid = await Service.findOne({
@@ -128,35 +137,33 @@ exports.getVehicles = async (req, res) => {
 
     res.status(200).json(enriched);
   } catch (err) {
-    console.error("getVehicles error", err);
-    res.status(500).json({ message: "Internal server error" });
+    next(err);
   }
 };
 
-// GET 
-// Fetch a single vehicle by VIN
-exports.getVehicle = async (req, res) => {
+// GET
+exports.getVehicle = async (req, res, next) => {
   try {
     const vin = req.params.id;
     const vehicle = await Vehicle.findOne({ VIN: vin }).lean();
 
     if (!vehicle) {
-      return res.status(400).json({ message: "Vehicle not found" });
+      const err = new Error("Vehicle not found");
+      err.statusCode = 400;
+      return next(err);
     }
 
-    // Ensure brand and type are supported
     if (
       !brands.includes(vehicle.make) ||
       !vehicleTypes.includes(vehicle.type)
     ) {
-      return res
-        .status(400)
-        .json({ message: "Vehicle type or brand not supported" });
+      const err = new Error("Vehicle type or brand not supported");
+      err.statusCode = 400;
+      return next(err);
     }
 
     res.status(200).json(vehicle);
   } catch (err) {
-    console.error("getVehicle error", err);
-    res.status(500).json({ message: "Internal server error" });
+    next(err);
   }
 };
